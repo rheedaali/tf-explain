@@ -13,8 +13,7 @@ class GradientsInputs(VanillaGradients):
     """
 
     @staticmethod
-    @tf.function
-    def compute_gradients(images, model, class_index):
+    def compute_gradients(images, model, class_index, **extra):
         """
         Compute gradients ponderated by input values for target class.
 
@@ -26,7 +25,7 @@ class GradientsInputs(VanillaGradients):
         Returns:
             tf.Tensor: 4D-Tensor
         """
-        gradients = VanillaGradients.compute_gradients(images, model, class_index)
+        gradients = VanillaGradients.compute_gradients(images, model, class_index, **extra)
         inputs = tf.cast(images, tf.float32)
 
         return tf.multiply(inputs, gradients)

@@ -17,7 +17,7 @@ class VanillaGradients:
         Models and Saliency Maps](https://arxiv.org/abs/1312.6034)
     """
 
-    def explain(self, validation_data, model, class_index):
+    def explain(self, validation_data, model, class_index, **extra):
         """
         Perform gradients backpropagation for a given input
 
@@ -32,7 +32,7 @@ class VanillaGradients:
         """
         images, _ = validation_data
 
-        gradients = self.compute_gradients(images, model, class_index)
+        gradients = self.compute_gradients(images, model, class_index, **extra)
 
         grayscale_gradients = transform_to_normalized_grayscale(
             tf.abs(gradients)
@@ -43,8 +43,7 @@ class VanillaGradients:
         return grid
 
     @staticmethod
-    @tf.function
-    def compute_gradients(images, model, class_index):
+    def compute_gradients(images, model, class_index, **extra):
         """
         Compute gradients for target class.
 
@@ -56,19 +55,50 @@ class VanillaGradients:
         Returns:
             tf.Tensor: 4D-Tensor
         """
+
         num_classes = model.output.shape[1]
 
-        expected_output = tf.one_hot([class_index] * images.shape[0], num_classes)
+        expected_output = tf.ones([1, 14, 14, 14, 1])
 
-        with tf.GradientTape() as tape:
-            inputs = tf.cast(images, tf.float32)
-            tape.watch(inputs)
-            predictions = model(inputs)
-            loss = tf.keras.losses.categorical_crossentropy(
-                expected_output, predictions
-            )
+        #if gt is not None:
+        #    expected_output = gt
+        #else:
+        #    expected_output = tf.one_hot([class_index] * images.shape[0], num_classes)
 
-        return tape.gradient(loss, inputs)
+        #import ipdb; ipdb.set_trace()
+        inputs = tf.cast(images, tf.float32)
+        if model.name == "unet":
+            expected_output=extra['gt']
+            with tf.GradientTape() as tape:
+                inputs = tf.cast(inputs, tf.float32)
+                tape.watch(inputs)
+                predictions = model(inputs)
+                loss = tf.keras.losses.mse(
+                    expected_output, predictions
+                )   
+                grad = tape.gradient(loss, inputs)
+                print('unet gradient')
+            return grad 
+
+
+        elif model.name == 'discriminator':
+            expected_output = tf.ones([1, 14, 14, 14, 1])
+           # inputs = [inputs, extra['pred']]
+           # inputs = tf.cast(inputs, tf.float32)
+            #input_0 = tf.cast(inputs[0], tf.float32)
+            #input_1 = tf.cast(inputs[1], tf.float32)
+            with tf.GradientTape() as tape:
+                tape.watch(inputs)
+               # tape1.watch(inputs)
+               # predictions = model([input_0, input_1])
+                #predictions = model([extra['mri '], inputs])
+                predictions = model([inputs, extra['pred']])
+                loss = tf.keras.losses.mse(
+                    expected_output, predictions
+                )
+                tape_grad = tape.gradient(loss, inputs)
+                
+            return tape_grad 
 
     def save(self, grid, output_dir, output_name):
         """

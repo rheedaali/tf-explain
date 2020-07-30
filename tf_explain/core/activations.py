@@ -28,10 +28,11 @@ class ExtractActivations:
         Returns:
             np.ndarray: Grid of all the activations
         """
+
         activations_model = self.generate_activations_graph(model, layers_name)
 
         predictions = activations_model.predict(
-            validation_data[0], batch_size=self.batch_size
+            [validation_data, validation_data], batch_size=1
         )
         grid = filter_display(predictions)
 
@@ -53,7 +54,7 @@ class ExtractActivations:
         """
         outputs = [layer.output for layer in model.layers if layer.name in layers_name]
         activations_model = tf.keras.models.Model(model.inputs, outputs=outputs)
-        activations_model.compile(optimizer="sgd", loss="categorical_crossentropy")
+        activations_model.compile(optimizer="sgd", loss="binary_crossentropy")
 
         return activations_model
 
